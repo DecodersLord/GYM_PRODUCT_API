@@ -1,68 +1,132 @@
 const express = require('express');
+const { func } = require('joi');
+const mongoose = require('mongoose');
 const app = express();
 app.use(express.json());
 
-const equipements = [
-    {Id: 1, Name: 'Treadmil'},
-    {Id: 2, Name: 'Cycle'},
-    {Id: 3, Name: 'Rower'},
-    {Id: 4, Name: 'Ski-erg'}
-]
+
+mongoose.connect('mongodb://localhost:27017/GYM-Equipements')
+    .then(() => console.log('connected to GYM-Equipements'))
+    .catch(err => console.error('could not connect to mongoDB.' , err));
+
+const EquipementsSchema = new mongoose.Schema({
+    name: String,
+    price: Number
+});
+
+const Equipement = mongoose.model('Equipement',EquipementsSchema);
+
+async function getEquipements(){
+    const equipement = await Equipement.find();
+    return equipement;
+}
+
+async function createEquipement(name, price){
+    console.log(name);
+    const equipement = new Equipement({
+        name: name,
+        price: price
+    });
+     
+    try{
+        const result = await equipement.save();
+        return result;
+    }
+    catch(err){
+        console.log(err.message);
+        return err.message;
+    }
+}
+
+async function getEquipementsWithName(name){
+    const equipement = await Equipement.find({
+        name: name
+    })
+    console.log(equipement);
+    return equipement;
+}
+
+async function updateEquipementName(name, price){
+
+    const equipementToUpdate = {name: name};
+    const priceToUpdate = {price: price};
+
+    
+    try{
+        const updatedEquipement = await Equipement.findOneAndUpdate(equipementToUpdate, priceToUpdate);
+        return updatedEquipement;
+    }
+    catch(err){
+        console.log(err.message);
+        return err.message;
+    }
+}
+
+async function deleteEquipementByName(name){
+    const equipementToDelete = {
+        name: name
+    };
+
+    console.lo
+
+    try{
+        const deletedEquipement = await Equipement.findOneAndRemove(equipementToDelete);
+        return deletedEquipement;
+    }
+    catch(err){
+        console.log(err.message);
+        return err.message;
+    }
+}
+
 
 app.get('/api/equipements', (req,res) => {
-    if(equipements.length <= 0){
-        return res.status(404).send('There are no product to display');
+    async function get(){
+        const result = await getEquipements();
+
+        res.send(result);
     }
-
-    res.send(equipements);
+    get();
 });
-
-app.get('/api/equipements/:id', (req,res) => {
-    const equipement = equipements.find(c => c.Id === parseInt(req.params.id));
-
-    if(!equipement) return res.status(404).send('There is no product with requested ID');
-
-    res.send(equipement);
-});
-
 app.post('/api/equipements', (req,res) => {
+    
+    async function create(){
+        const result = await createEquipement(req.body.name, req.body.price);
+        console.log(result);
 
-    if(!req.body.name || req.body.name.length < 3){
-        res.status(400).send('Name is required and should be longer than 3 chars');
+        res.send(result);
     }
-
-    const equipement = {
-        id: equipements.length + 1,
-        Name: req.body.name
-    }
-
-    equipements.push(equipement);
-
-    res.send(equipement);
+    create();
 });
 
-app.put('/api/equipements/:id', (req,res) => {
-    const equipement = equipements.find(c => c.Id === parseInt(req.params.id));
+app.get('/api/equipements/:name', (req,res) => {
+    async function getEquipementWithName(){
+        const result = await getEquipementsWithName(req.params.name);
 
-    if(!equipement) return res.status(404).send('There is no product with requested ID');
-
-    if(!req.body.name || req.body.name.length < 3){
-        res.status(400).send('Name is required and should be longer than 3 chars');
+        res.send(result);
     }
-
-    equipement.Name = req.body.name;
-
-    res.send(equipement);
+    getEquipementWithName();
+    
 });
 
-app.delete('/api/equipements/:id', (req,res) => {
-    const equipement = equipements.find(c => c.Id === parseInt(req.params.id));
+app.put('/api/equipements/:name', (req,res) => {
+    async function updateEquipement(){
+        const result = await updateEquipementName(req.params.name, req.body.price);
 
-    if(!equipement) return res.status(404).send('There is no product with requested ID');
+        res.send(result);
+    }
+    updateEquipement();
+    
+});
 
-    const index = equipements.indexOf(req.params.id);
-    equipements.splice(index,1);
-    res.send(equipement);
+app.delete('/api/equipements/:name', (req,res) => {
+
+    async function deleteEquipement(){
+        const result = await deleteEquipementByName(req.params.name);
+
+        res.send(result);
+    }
+    deleteEquipement();
 });
 
 const port = process.env.PORT || 3000;
